@@ -15,7 +15,7 @@ function sn(v) {
 function gerar(ctx, tipo, { desde = null } = {}) {
   const fuso = ctx.ajustes.get('fuso');
   const data = new Date().toISOString().slice(0, 10);
-  const nome = `inviewte-${tipo}-${data}.csv`;
+  const nome = `inviewter-${tipo}-${data}.csv`;
 
   if (tipo === 'links') {
     const m = new Map(stats.porLink(ctx, { desde }).map((x) => [x.id, x]));

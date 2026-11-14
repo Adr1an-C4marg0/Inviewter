@@ -21,7 +21,7 @@ const CANAIS = [
 
 const data = new SlashCommandBuilder()
   .setName('config')
-  .setDescription('Configura o InViewte (só administradores)')
+  .setDescription('Configura o inviewter (só administradores)')
   .addSubcommand((s) => {
     s.setName('canais').setDescription('Define os canais de log e de alertas');
     for (const [nome, , rotulo] of CANAIS) {
@@ -45,7 +45,7 @@ const data = new SlashCommandBuilder()
       .addBooleanOption((o) => o.setName('semanal').setDescription('Resumo toda segunda, 09h'))
       .addBooleanOption((o) => o.setName('mensal').setDescription('Resumo todo dia 1, 09h')))
   .addSubcommand((s) =>
-    s.setName('permissao').setDescription('Define o que um cargo pode fazer no InViewte')
+    s.setName('permissao').setDescription('Define o que um cargo pode fazer no inviewter')
       .addRoleOption((o) => o.setName('cargo').setDescription('Cargo').setRequired(true))
       .addBooleanOption((o) => o.setName('ver_stats').setDescription('Ver estatísticas e painel'))
       .addBooleanOption((o) => o.setName('gerir_links').setDescription('Criar, renomear, desativar e excluir links'))
@@ -151,13 +151,13 @@ async function execute(app, interaction) {
     }
     const salvo = permissoes.definir(ctx, cargo.id, perms);
     auditoria.registrar(ctx, quem, 'config_permissao', `${cargo.id} ${JSON.stringify(perms)}`);
-    if (!salvo) return responder(`${cargo} não tem mais permissões no InViewte.`);
+    if (!salvo) return responder(`${cargo} não tem mais permissões no inviewter.`);
     const lista = permissoes.ACOES.filter((k) => salvo[k]).map((k) => permissoes.ROTULOS[k]);
     return responder(`${cargo} agora pode: ${lista.join('; ')}.`);
   }
 
   // ver
-  const e = new EmbedBuilder().setColor(CORES.info).setTitle('Configuração do InViewte').setDescription(resumo(a)).setFooter({ text: 'InViewte' });
+  const e = new EmbedBuilder().setColor(CORES.info).setTitle('Configuração do inviewter').setDescription(resumo(a)).setFooter({ text: 'inviewter' });
   return interaction.reply({ embeds: [e], flags: EFEMERO, allowedMentions: { parse: [] } });
 }
 

@@ -30,7 +30,7 @@ async function criarLink(app, { nome, fonte, canal, validadeMs = 0, maxUsos = 0,
     maxAge: nativo ? Math.floor(validadeMs / 1000) : 0,
     maxUses: maxUsos || 0,
     unique: true,
-    reason: `InViewte: link "${nome}"`,
+    reason: `inviewter: link "${nome}"`,
   });
   try {
     const link = links.registrar(ctx, {
@@ -46,7 +46,7 @@ async function criarLink(app, { nome, fonte, canal, validadeMs = 0, maxUsos = 0,
     auditoria.registrar(ctx, usuarioId, 'link_criado', `${link.nome} (${link.codigo})`);
     return { link, url: `https://discord.gg/${convite.code}`, revogadoPeloBot: validadeMs > MAX_DISCORD_MS };
   } catch (e) {
-    await convite.delete('InViewte: falha ao registrar o link').catch(() => {});
+    await convite.delete('inviewter: falha ao registrar o link').catch(() => {});
     throw e;
   }
 }
@@ -56,7 +56,7 @@ async function convitesDoServidor(app) {
   return [...convites.values()];
 }
 
-/** Convites que existem no Discord mas ainda não são links do InViewte. */
+/** Convites que existem no Discord mas ainda não são links do inviewter. */
 async function convitesNaoRegistrados(app) {
   const todos = await convitesDoServidor(app);
   return todos.filter((c) => !links.porCodigo(app.ctx, c.code));
@@ -82,7 +82,7 @@ async function importarLink(app, { codigo, nome, fonte, usuarioId }) {
 
 async function revogarNoDiscord(app, codigo) {
   try {
-    await guildDe(app).invites.delete(codigo, 'InViewte');
+    await guildDe(app).invites.delete(codigo, 'inviewter');
     return true;
   } catch {
     return false; // já não existia

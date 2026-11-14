@@ -26,7 +26,7 @@ const invites = {
         { name: 'Saídas', value: fmtNum(c.saidas), inline: true },
         { name: 'Fakes', value: fmtNum(c.fakes), inline: true },
       )
-      .setFooter({ text: 'InViewte · válidos = entradas − saídas − fakes' });
+      .setFooter({ text: 'inviewter · válidos = entradas − saídas − fakes' });
     const r = recompensas.configuracao(app.ctx);
     if (r.ativa) {
       const falta = Math.max(0, r.minimo - c.validos);
@@ -66,7 +66,7 @@ const top = {
       .setColor(CORES.info)
       .setTitle('Quem mais convida')
       .setDescription(`${formato.textoPeriodo(periodo)}\n\n${linhas.join('\n') || 'Ainda não há convites de usuários registrados.'}`)
-      .setFooter({ text: 'InViewte' });
+      .setFooter({ text: 'inviewter' });
     return interaction.reply({ embeds: [e], allowedMentions: { parse: [] } });
   },
 };

@@ -38,8 +38,8 @@ function membro(id, nome, { admin = false } = {}) {
 
 function cookieDe(userId) {
   const valor = Buffer.from(JSON.stringify({ user: { id: userId, nome: 'Teste' } })).toString('base64');
-  const sig = new Keygrip(['segredo-de-teste']).sign(`inviewte=${valor}`);
-  return `inviewte=${valor}; inviewte.sig=${sig}`;
+  const sig = new Keygrip(['segredo-de-teste']).sign(`inviewter=${valor}`);
+  return `inviewter=${valor}; inviewter.sig=${sig}`;
 }
 
 async function chamar(metodo, caminho, { usuario = ID_ADMIN, corpo } = {}) {

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>InViewte</title>
+<title>inviewter</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%235B6CFF' d='M12 2 22 22 12 18 2 22z'/%3E%3C/svg%3E">
 <style>
   :root { --bg:#f5f6fb; --card:#ffffff; --txt:#1b1c29; --mut:#6b6f85; --ln:#e3e5f0; --pri:#5b6cff; --ok:#3bd38f; --bad:#f25c5c; --warn:#f5b83d; }
@@ -48,7 +48,7 @@
     <circle cx="32" cy="32" r="26" fill="none" stroke="#2EC4F1" stroke-width="3" stroke-dasharray="6 8" stroke-linecap="round"/>
     <path d="M32 12 L50 52 L32 44 L14 52 Z" fill="#5B6CFF"/>
   </svg>
-  <h1>InViewte</h1>
+  <h1>inviewter</h1>
   <div id="who" class="mut"></div>
 </header>
 <main id="app"><p class="mut">Carregando…</p></main>
@@ -492,7 +492,7 @@
     const nav = h('nav', null, ...abas.map(([k, t]) => h('button', { class: S.aba === k ? 'on' : '', on: { click: () => { S.aba = k; S.detalhe = null; render(); } } }, t)));
     const corpo = h('div');
     app.replaceChildren(nav, corpo);
-    if (!abas.length) return corpo.append(h('p', { class: 'mut' }, 'Seu cargo não tem nenhuma permissão no InViewte.'));
+    if (!abas.length) return corpo.append(h('p', { class: 'mut' }, 'Seu cargo não tem nenhuma permissão no inviewter.'));
     try {
       const alvo = abas.find(([k]) => k === S.aba);
       await alvo[3](corpo);
@@ -507,7 +507,7 @@
     if (!S.me.logado) {
       who.textContent = '';
       app.replaceChildren(h('div', { class: 'card login' },
-        h('h2', null, 'Painel do InViewte'),
+        h('h2', null, 'Painel do inviewter'),
         h('p', { class: 'mut' }, 'Entre com sua conta do Discord. Você verá apenas o que o seu cargo permite.'),
         h('a', { href: '/login' }, h('button', { class: 'pri' }, 'Entrar com Discord'))));
       return;

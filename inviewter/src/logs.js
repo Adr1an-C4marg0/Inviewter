@@ -10,7 +10,7 @@ const CORES = {
   info: 0x5b6cff,
 };
 
-const RODAPE = { text: 'InViewte' };
+const RODAPE = { text: 'inviewter' };
 
 const unix = (ms) => Math.floor(ms / 1000);
 

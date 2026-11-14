@@ -13,7 +13,7 @@ async function exigir(app, interaction, acao) {
   if (!ok) {
     const msg = acao === 'admin'
       ? 'Só administradores do servidor podem usar este comando.'
-      : 'Você não tem permissão para isso. Peça a um administrador para liberar seu cargo no InViewte.';
+      : 'Você não tem permissão para isso. Peça a um administrador para liberar seu cargo no inviewter.';
     const payload = { content: msg, flags: EFEMERO };
     if (interaction.deferred || interaction.replied) await interaction.followUp(payload);
     else await interaction.reply(payload);

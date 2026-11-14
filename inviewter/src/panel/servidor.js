@@ -28,7 +28,7 @@ function iniciar(app) {
   ex.set('trust proxy', 1);
   ex.use(express.json({ limit: '100kb' }));
   ex.use(cookieSession({
-    name: 'inviewte',
+    name: 'inviewter',
     keys: [config.sessionSecret],
     maxAge: 7 * 24 * 3600 * 1000,
     sameSite: 'lax',
@@ -273,7 +273,7 @@ function iniciar(app) {
     return res.json(ids.map((id) => ({ pessoa: nomes.get(id), ...entradas.contagemConvites(ctx, id) })));
   });
 
-  /** Convites do Discord que ainda não viraram links do InViewte. */
+  /** Convites do Discord que ainda não viraram links do inviewter. */
   ex.get('/api/convites-livres', login, permissao('gerir_links'), async (req, res, next) => {
     try {
       const lista = await acoes.convitesNaoRegistrados(app);

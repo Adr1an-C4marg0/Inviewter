@@ -18,7 +18,7 @@ function backup(app) {
   const dir = path.join(config.dataDir, 'backups');
   fs.mkdirSync(dir, { recursive: true });
   const hoje = new Date().toISOString().slice(0, 10);
-  const arquivo = path.join(dir, `inviewte-${hoje}.db`);
+  const arquivo = path.join(dir, `inviewter-${hoje}.db`);
   if (!fs.existsSync(arquivo)) app.db.prepare('VACUUM INTO ?').run(arquivo);
   const arquivos = fs.readdirSync(dir).filter((f) => f.endsWith('.db')).sort();
   for (const antigo of arquivos.slice(0, Math.max(0, arquivos.length - MANTER_BACKUPS))) {

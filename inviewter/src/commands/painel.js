@@ -6,7 +6,7 @@ const { EFEMERO, exigir } = require('../ui');
 
 const data = new SlashCommandBuilder()
   .setName('painel')
-  .setDescription('Mostra o link do painel web do InViewte');
+  .setDescription('Mostra o link do painel web do inviewter');
 
 async function execute(app, interaction) {
   if (!(await exigir(app, interaction, 'ver_stats'))) return;

@@ -48,7 +48,7 @@ function embedMetricas(titulo, m, periodo) {
     .setTitle(titulo)
     .setDescription(`Período: ${textoPeriodo(periodo)}`)
     .addFields(camposMetricas(m))
-    .setFooter({ text: 'InViewte' })
+    .setFooter({ text: 'inviewter' })
     .setTimestamp();
 }
 
@@ -61,7 +61,7 @@ function embedComparativo(ctx, periodo, desde) {
   const e = new EmbedBuilder()
     .setColor(CORES.info)
     .setTitle('Plataformas: volume e qualidade')
-    .setFooter({ text: 'InViewte · ordenado pelo índice de qualidade (ativos ÷ entradas)' })
+    .setFooter({ text: 'inviewter · ordenado pelo índice de qualidade (ativos ÷ entradas)' })
     .setTimestamp();
   const linhas = lista.length
     ? lista.map((p, i) => `${i + 1}. ${linhaMetricas(p.nome, p)}`)

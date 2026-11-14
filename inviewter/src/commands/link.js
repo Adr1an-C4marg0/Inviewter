@@ -94,7 +94,7 @@ async function execute(app, interaction) {
       });
       const e = new EmbedBuilder().setColor(CORES.entrada).setTitle('Link criado').setDescription(descricaoLink(r.link, r.url));
       if (r.revogadoPeloBot) {
-        e.setFooter({ text: `O Discord limita a validade a 7 dias; o InViewte revoga o convite sozinho em ${formatarDuracao(validadeMs)}.` });
+        e.setFooter({ text: `O Discord limita a validade a 7 dias; o inviewter revoga o convite sozinho em ${formatarDuracao(validadeMs)}.` });
       }
       return interaction.editReply({ embeds: [e] });
     } catch (err) {

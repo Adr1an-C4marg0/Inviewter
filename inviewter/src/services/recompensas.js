@@ -57,7 +57,7 @@ async function avaliar(ctx, guild, userId) {
   const tem = membro.roles.cache.has(role.id);
   if (validos >= cfg.minimo && !tem && !foiConcedida(ctx, userId)) {
     try {
-      await membro.roles.add(role, `InViewte: ${validos} convites válidos`);
+      await membro.roles.add(role, `inviewter: ${validos} convites válidos`);
       marcarConcedida(ctx, userId);
       return { acao: 'concedido', validos, role };
     } catch (e) {
@@ -66,7 +66,7 @@ async function avaliar(ctx, guild, userId) {
   }
   if (validos < cfg.minimo && cfg.remover && tem) {
     try {
-      await membro.roles.remove(role, 'InViewte: abaixo do mínimo de convites válidos');
+      await membro.roles.remove(role, 'inviewter: abaixo do mínimo de convites válidos');
       limparConcedida(ctx, userId);
       return { acao: 'removido', validos, role };
     } catch (e) {

@@ -1,7 +1,7 @@
 {
-  "name": "inviewte",
+  "name": "inviewter",
   "version": "0.1.0",
-  "description": "InViewte: rastreador de convites do Discord com métricas de retenção por link e plataforma",
+  "description": "inviewter: rastreador de convites do Discord com métricas de retenção por link e plataforma",
   "private": true,
   "main": "src/index.js",
   "scripts": {

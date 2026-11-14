@@ -1,4 +1,4 @@
-# InViewte
+# inviewter
 
 Bot de Discord que descobre por qual link cada membro entrou e mede a qualidade de cada origem:
 entradas, saídas, retenção (D7 e D30), usuários ativos e índice de qualidade por plataforma.

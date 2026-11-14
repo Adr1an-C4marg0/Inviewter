@@ -101,7 +101,7 @@ function iniciar(db) {
 
 function abrir(dataDir) {
   fs.mkdirSync(dataDir, { recursive: true });
-  return iniciar(new Database(path.join(dataDir, 'inviewte.db')));
+  return iniciar(new Database(path.join(dataDir, 'inviewter.db')));
 }
 
 function abrirMemoria() {
