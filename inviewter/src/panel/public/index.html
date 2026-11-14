@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>InViewte</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%235B6CFF' d='M12 2 22 22 12 18 2 22z'/%3E%3C/svg%3E">
+<style>
+  :root { --bg:#f5f6fb; --card:#ffffff; --txt:#1b1c29; --mut:#6b6f85; --ln:#e3e5f0; --pri:#5b6cff; --ok:#3bd38f; --bad:#f25c5c; --warn:#f5b83d; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#1e1f2b; --card:#272a3a; --txt:#eceef8; --mut:#9ca0b8; --ln:#363a4f; } }
+  :root[data-theme="dark"] { --bg:#1e1f2b; --card:#272a3a; --txt:#eceef8; --mut:#9ca0b8; --ln:#363a4f; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--txt); font: 15px/1.45 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  header { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--ln); background: var(--card); position: sticky; top: 0; z-index: 2; flex-wrap: wrap; }
+  header h1 { font-size: 18px; margin: 0; flex: 1; }
+  main { padding: 16px; max-width: 1100px; margin: 0 auto; }
+  nav { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+  nav button { white-space: nowrap; }
+  button { font: inherit; cursor: pointer; border: 1px solid var(--ln); background: var(--card); color: var(--txt); padding: 7px 12px; border-radius: 8px; }
+  button.pri { background: var(--pri); border-color: var(--pri); color: #fff; }
+  button.on { border-color: var(--pri); color: var(--pri); font-weight: 600; }
+  button.perigo { color: var(--bad); }
+  button:disabled { opacity: .5; cursor: default; }
+  input, select { font: inherit; padding: 7px 9px; border-radius: 8px; border: 1px solid var(--ln); background: var(--bg); color: var(--txt); max-width: 100%; }
+  .card { background: var(--card); border: 1px solid var(--ln); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .kpi { background: var(--card); border: 1px solid var(--ln); border-radius: 12px; padding: 14px; }
+  .kpi b { display: block; font-size: 22px; }
+  .kpi span { color: var(--mut); font-size: 13px; }
+  .wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { padding: 8px 6px; border-bottom: 1px solid var(--ln); text-align: left; white-space: nowrap; }
+  th { color: var(--mut); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: end; }
+  .row label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--mut); }
+  .mut { color: var(--mut); }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; border: 1px solid var(--ln); }
+  .ok { color: var(--ok); } .bad { color: var(--bad); } .warn { color: var(--warn); }
+  .msg { padding: 10px 12px; border-radius: 8px; border: 1px solid var(--ln); margin: 10px 0; }
+  .login { text-align: center; padding: 40px 16px; }
+  canvas { max-height: 320px; }
+  .hero { width: 44px; height: 44px; flex: none; }
+</style>
+</head>
+<body>
+<header>
+  <svg class="hero" viewBox="0 0 64 64" aria-hidden="true">
+    <circle cx="32" cy="32" r="26" fill="none" stroke="#2EC4F1" stroke-width="3" stroke-dasharray="6 8" stroke-linecap="round"/>
+    <path d="M32 12 L50 52 L32 44 L14 52 Z" fill="#5B6CFF"/>
+  </svg>
+  <h1>InViewte</h1>
+  <div id="who" class="mut"></div>
+</header>
+<main id="app"><p class="mut">Carregando…</p></main>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+(() => {
+  const app = document.getElementById('app');
+  const who = document.getElementById('who');
+  const S = { me: null, aba: 'visao', periodo: '30', chart: null, detalhe: null };
+
+  const h = (tag, props, ...kids) => {
+    const e = document.createElement(tag);
+    for (const [k, v] of Object.entries(props || {})) {
+      if (v == null || v === false) continue;
+      if (k === 'on') for (const [ev, f] of Object.entries(v)) e.addEventListener(ev, f);
+      else if (k === 'class') e.className = v;
+      else if (k === 'value' || k === 'checked') e[k] = v;
+      else e.setAttribute(k, v === true ? '' : v);
+    }
+    for (const c of kids.flat()) {
+      if (c == null || c === false) continue;
+      e.append(c instanceof Node ? c : document.createTextNode(String(c)));
+    }
+    return e;
+  };
+
+  async function api(url, body) {
+    const opts = body === undefined
+      ? { credentials: 'same-origin' }
+      : { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+    const r = await fetch(url, opts);
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.erro || `Erro ${r.status}`);
+    return j;
+  }
+
+  const n = (v) => (v == null ? '–' : new Intl.NumberFormat('pt-BR').format(v));
+  const p = (v) => (v == null ? '–' : `${String(v).replace('.', ',')}%`);
+  const data = (ms) => (ms ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Sao_Paulo' }).format(new Date(ms)) : '–');
+
+  const pessoaCel = (p, id) => h('span', { style: 'display:inline-flex;align-items:center;gap:6px' },
+    p && p.avatar ? h('img', { src: p.avatar, width: 20, height: 20, alt: '', style: 'border-radius:50%' }) : '',
+    p ? p.nome : id);
+
+  const ROTULOS_AUD = {
+    link_criado: 'Link criado', link_importado: 'Link importado', link_renomeado: 'Link renomeado',
+    link_desativado: 'Link desativado', link_excluido: 'Link excluído',
+    marcado_fake: 'Marcado como fake', desmarcado_fake: 'Fake desmarcado',
+    reset_usuario: 'Reset de usuário', reset_servidor: 'Reset do servidor',
+    recompensa_ativada: 'Recompensa ligada', recompensa_desativada: 'Recompensa desligada',
+    recompensa_painel: 'Recompensa alterada', permissao_painel: 'Permissão alterada',
+    config_painel: 'Configuração alterada', config_canais: 'Canais alterados', config_fuso: 'Fuso alterado',
+    config_antiabuso: 'Anti-abuso alterado', config_relatorios: 'Relatórios alterados', config_permissao: 'Permissão alterada',
+  };
+
+  function msg(texto, tipo = 'ok') {
+    const box = h('div', { class: 'msg' }, h('span', { class: tipo }, texto));
+    setTimeout(() => box.remove(), 4000);
+    return box;
+  }
+
+  function periodoSel(onChange) {
+    const sel = h('select', { on: { change: (e) => { S.periodo = e.target.value; onChange(); } } },
+      ...[['7', 'Últimos 7 dias'], ['30', 'Últimos 30 dias'], ['90', 'Últimos 90 dias'], ['tudo', 'Desde o início']]
+        .map(([v, t]) => h('option', { value: v, selected: S.periodo === v ? 'selected' : null }, t)));
+    return h('label', { class: 'row' }, 'Período', sel);
+  }
+
+  function kpis(g) {
+    return h('div', { class: 'cards' },
+      ...[
+        ['Entradas', n(g.entradas)], ['Saídas', n(g.saidas)], ['Fakes', n(g.fakes)],
+        ['Retenção D7', p(g.retencao[7])], ['Retenção D30', p(g.retencao[30])],
+        ['Usuários ativos', `${n(g.ativos)} (${p(g.indice)})`],
+      ].map(([t, v]) => h('div', { class: 'kpi' }, h('b', null, v), h('span', null, t))));
+  }
+
+  function tabelaMetricas(lista) {
+    return h('div', { class: 'wrap' }, h('table', null,
+      h('thead', null, h('tr', null, ...['Origem', 'Entradas', 'Saídas', 'Fakes', 'D7', 'D30', 'Ativos', 'Índice de qualidade']
+        .map((t) => h('th', null, t)))),
+      h('tbody', null, ...lista.map((x) => h('tr', null,
+        h('td', null, x.tipo === 'plataforma'
+          ? h('a', { href: '#', title: 'Ver detalhes', on: { click: (ev) => { ev.preventDefault(); S.detalhe = x.nome; render(); } } }, x.nome)
+          : x.nome),
+        h('td', null, n(x.entradas)), h('td', null, n(x.saidas)), h('td', null, n(x.fakes)),
+        h('td', null, p(x.retencao[7])), h('td', null, p(x.retencao[30])), h('td', null, n(x.ativos)),
+        h('td', { class: 'ok' }, p(x.indice)))))));
+  }
+
+  function desenharGrafico(evolucao) {
+    if (S.chart) S.chart.destroy();
+    S.chart = new Chart(document.getElementById('grafico'), {
+      type: 'line',
+      data: {
+        labels: evolucao.map((x) => x.chave.slice(5)),
+        datasets: [
+          { label: 'Entradas', data: evolucao.map((x) => x.entradas), borderColor: '#5b6cff', backgroundColor: '#5b6cff33', tension: .3, fill: true },
+          { label: 'Saídas', data: evolucao.map((x) => x.saidas), borderColor: '#f25c5c', tension: .3 },
+        ],
+      },
+      options: { responsive: true, plugins: { legend: { labels: { color: getComputedStyle(document.body).color } } } },
+    });
+  }
+
+  /** Detalhe de uma plataforma: métricas, cada link dela e a evolução no período. */
+  async function detalhe(root, fonte) {
+    const d = await api(`/api/plataforma?fonte=${encodeURIComponent(fonte)}&periodo=${S.periodo}`);
+    const voltar = h('button', { on: { click: () => { S.detalhe = null; render(); } } }, '← Voltar');
+    root.append(
+      h('div', { class: 'row' }, voltar, periodoSel(render)),
+      h('h2', null, fonte),
+      kpis(d.geral),
+      h('div', { class: 'card' }, h('h3', null, 'Entradas e saídas'), h('canvas', { id: 'grafico' })),
+      h('div', { class: 'card' }, h('h3', null, 'Links desta plataforma'),
+        d.links.length
+          ? tabelaMetricas(d.links.map((l) => ({ ...l, nome: l.removido ? `${l.nome} (removido)` : l.nome, tipo: 'link' })))
+          : h('p', { class: 'mut' }, 'Nenhum link nesta plataforma.'),
+        h('p', { class: 'mut' }, 'Compare as campanhas da mesma plataforma pelo índice de qualidade.')));
+    desenharGrafico(d.evolucao);
+  }
+
+  async function visao(root) {
+    if (S.detalhe) return detalhe(root, S.detalhe);
+    const d = await api(`/api/resumo?periodo=${S.periodo}`);
+    root.append(periodoSel(render), kpis(d.geral),
+      h('div', { class: 'card' }, h('h3', null, 'Entradas e saídas por dia'), h('canvas', { id: 'grafico' })),
+      h('div', { class: 'card' }, h('h3', null, 'Plataformas, do melhor para o pior'),
+        d.plataformas.length ? tabelaMetricas(d.plataformas) : h('p', { class: 'mut' }, 'Ainda não há entradas no período.'),
+        h('p', { class: 'mut' }, 'Índice de qualidade = usuários ativos ÷ entradas. Poucas entradas muito ativas podem valer mais que muitas pouco ativas.')));
+    desenharGrafico(d.evolucao);
+    return undefined;
+  }
+
+  async function linksAba(root) {
+    const lista = await api(`/api/links?periodo=${S.periodo}`);
+    const podeGerir = S.me.permissoes.links;
+    const novo = podeGerir ? formNovoLink(render) : null;
+    const imp = podeGerir ? formImportar(render) : null;
+    root.append(periodoSel(render), novo || '', imp || '');
+    root.append(h('div', { class: 'card wrap' }, lista.length ? h('table', null,
+      h('thead', null, h('tr', null, ...['Nome', 'Fonte', 'Status', 'Validade', 'Entradas', 'D7', 'Ativos', 'Índice', ''].map((t) => h('th', null, t)))),
+      h('tbody', null, ...lista.map((l) => h('tr', null,
+        h('td', null, h('b', null, l.nome), h('div', { class: 'mut' }, l.url)),
+        h('td', null, l.fonte || '–'),
+        h('td', null, h('span', { class: 'tag' }, l.status)),
+        h('td', null, l.validade ? data(l.validade) : 'permanente'),
+        h('td', null, n(l.entradas)), h('td', null, p(l.retencao[7])), h('td', null, n(l.ativos)), h('td', null, p(l.indice)),
+        h('td', null, podeGerir ? acoesLink(l) : '')))))
+      : h('p', { class: 'mut' }, 'Nenhum link ainda.')));
+  }
+
+  function acoesLink(l) {
+    if (l.status === 'removido') return '';
+    const ren = h('button', { on: { click: async () => {
+      const nome = prompt('Novo nome do link', l.nome); if (!nome) return;
+      const fonte = prompt('Fonte / plataforma (deixe vazio para usar o nome)', l.fonte || ''); if (fonte === null) return;
+      try { await api(`/api/links/${l.id}/renomear`, { nome, fonte }); render(); } catch (e) { alert(e.message); }
+    } } }, 'Renomear');
+    const des = l.status === 'ativo' ? h('button', { on: { click: async () => {
+      if (!confirm(`Desativar ${l.nome}? O convite será revogado no Discord.`)) return;
+      try { await api(`/api/links/${l.id}/desativar`, {}); render(); } catch (e) { alert(e.message); }
+    } } }, 'Desativar') : '';
+    const exc = h('button', { class: 'perigo', on: { click: async () => {
+      const apagar = confirm(`Excluir ${l.nome}?\n\nOK = excluir E apagar as entradas desse link (irreversível).\nCancelar = não excluir.`);
+      if (!apagar) return;
+      try { await api(`/api/links/${l.id}/excluir`, { apagarDados: true }); render(); } catch (e) { alert(e.message); }
+    } } }, 'Excluir');
+    return h('div', { class: 'row' }, ren, des, exc);
+  }
+
+  /** Lista os convites do Discord que ainda não têm nome e deixa nomear cada um. */
+  function formImportar(redesenhar) {
+    const corpo = h('div', { class: 'wrap', style: 'margin-top:12px' }, h('p', { class: 'mut' }, 'Carregando…'));
+    const det = h('details', { class: 'card' }, h('summary', null, h('b', null, 'Importar convite existente')), corpo);
+    det.addEventListener('toggle', async () => {
+      if (!det.open) return;
+      corpo.replaceChildren(h('p', { class: 'mut' }, 'Carregando…'));
+      try {
+        const lista = await api('/api/convites-livres');
+        if (!lista.length) {
+          corpo.replaceChildren(h('p', { class: 'mut' }, 'Todos os convites do servidor já têm nome.'));
+          return;
+        }
+        const linhas = lista.map((c) => {
+          const botao = h('button', { on: { click: async () => {
+            const nome = prompt('Nome do link (ex.: Instagram)'); if (!nome) return;
+            const fonte = prompt('Fonte / plataforma (opcional)', nome); if (fonte === null) return;
+            try { await api('/api/links/importar', { codigo: c.codigo, nome, fonte }); redesenhar(); } catch (e) { alert(e.message); }
+          } } }, 'Dar nome');
+          return h('tr', null,
+            h('td', null, c.url), h('td', null, c.criadoPor || '–'),
+            h('td', null, `${n(c.usos)}${c.maxUsos ? ` / ${c.maxUsos}` : ''}`),
+            h('td', null, c.canal ? `#${c.canal}` : '–'),
+            h('td', null, c.validade ? data(c.validade) : 'permanente'),
+            h('td', null, botao));
+        });
+        corpo.replaceChildren(h('table', null,
+          h('thead', null, h('tr', null, ...['Convite', 'Criado por', 'Usos', 'Canal', 'Validade', ''].map((t) => h('th', null, t)))),
+          h('tbody', null, ...linhas)));
+      } catch (e) {
+        corpo.replaceChildren(h('p', { class: 'bad' }, e.message));
+      }
+    });
+    return det;
+  }
+
+  function formNovoLink(redesenhar) {
+    const nome = h('input', { id: 'l-nome', maxlength: 60, placeholder: 'Ex.: Instagram' });
+    const fonte = h('input', { id: 'l-fonte', maxlength: 60, placeholder: 'Ex.: Instagram' });
+    const validade = h('input', { id: 'l-val', value: 'perm', placeholder: '30m, 12h, 7d ou perm' });
+    const usos = h('input', { id: 'l-usos', type: 'number', min: 0, max: 100, value: 0, style: 'width:90px' });
+    const canal = h('select', { id: 'l-canal' }, h('option', { value: '' }, 'carregando…'));
+    api('/api/canais').then((lista) => {
+      canal.replaceChildren(...lista.map((c) => h('option', { value: c.id }, `#${c.nome}`)));
+    }).catch(() => canal.replaceChildren(h('option', { value: '' }, 'sem canais')));
+    const botao = h('button', { class: 'pri', on: { click: async () => {
+      botao.disabled = true;
+      try {
+        const r = await api('/api/links', { nome: nome.value, fonte: fonte.value, canalId: canal.value, validade: validade.value, usos: usos.value });
+        alert(`Link criado:\n${r.url}`);
+        redesenhar();
+      } catch (e) { alert(e.message); } finally { botao.disabled = false; }
+    } } }, 'Criar link');
+    return h('details', { class: 'card' }, h('summary', null, h('b', null, 'Criar link de convite')),
+      h('div', { class: 'row', style: 'margin-top:12px' },
+        h('label', null, 'Nome', nome), h('label', null, 'Fonte', fonte), h('label', null, 'Canal', canal),
+        h('label', null, 'Validade', validade), h('label', null, 'Usos máx. (0 = ilimitado)', usos), botao));
+  }
+
+  async function entradasAba(root) {
+    const busca = h('input', { id: 'busca', placeholder: 'Nome ou ID', style: 'min-width:200px' });
+    const revisar = h('input', { type: 'checkbox', id: 'rev' });
+    const fakes = h('input', { type: 'checkbox', id: 'fk' });
+    const corpo = h('tbody');
+    const carregar = async () => {
+      const q = new URLSearchParams({ busca: busca.value, revisar: revisar.checked ? '1' : '', fakes: fakes.checked ? '1' : '' });
+      const lista = await api(`/api/entradas?${q}`);
+      corpo.replaceChildren(...lista.map((e) => h('tr', null,
+        h('td', null, e.tag || e.userId), h('td', null, data(e.entrouEm)), h('td', null, e.link || e.origem),
+        h('td', null, e.convidadorId ? pessoaCel(e.convidador, e.convidadorId) : '–'),
+        h('td', null, e.saiuEm ? h('span', { class: 'mut' }, 'saiu') : h('span', { class: 'ok' }, 'no servidor')),
+        h('td', null, e.fake ? h('span', { class: 'bad' }, `fake: ${e.motivo || ''}`) : (e.revisar ? h('span', { class: 'warn' }, 'revisar') : '–')),
+        h('td', null, S.me.permissoes.links || S.me.permissoes.recompensas ? h('button', { on: { click: async () => {
+          try { await api(`/api/entradas/${e.userId}/fake`, { valor: !e.fake }); carregar(); } catch (er) { alert(er.message); }
+        } } }, e.fake ? 'Não é fake' : 'Marcar fake') : ''))));
+    };
+    [busca, revisar, fakes].forEach((el) => el.addEventListener(el.type === 'checkbox' ? 'change' : 'input', () => carregar()));
+    root.append(h('div', { class: 'card' }, h('div', { class: 'row' }, h('label', null, 'Buscar', busca),
+      h('label', { class: 'row' }, revisar, 'Só para revisar'), h('label', { class: 'row' }, fakes, 'Só fakes')),
+      h('div', { class: 'wrap', style: 'margin-top:12px' }, h('table', null,
+        h('thead', null, h('tr', null, ...['Membro', 'Entrou', 'Origem', 'Convidado por', 'Situação', 'Marcação', ''].map((t) => h('th', null, t)))),
+        corpo))));
+    await carregar();
+  }
+
+  async function zerarUsuario(id, nome) {
+    if (!confirm(`Zerar a contagem de convites de ${nome}?\nO histórico dos logs não é apagado.`)) return;
+    const metricas = confirm('Zerar também as métricas desses convidados?\nOK = sim, Cancelar = só a contagem.');
+    try {
+      const r = await api('/api/resetar/usuario', { userId: id, metricas });
+      alert(`Contagem zerada (${r.entradas} entradas).`);
+      render();
+    } catch (e) { alert(e.message); }
+  }
+
+  /** Tabela de convites por membro. Serve para o ranking e para o resultado da consulta. */
+  function tabelaConvites(itens, comPosicao) {
+    const podeReset = S.me.permissoes.recompensas;
+    const cab = [...(comPosicao ? ['#'] : []), 'Membro', 'Válidos', 'Entradas', 'Saídas', 'Fakes', ...(podeReset ? [''] : [])];
+    return h('table', null,
+      h('thead', null, h('tr', null, ...cab.map((t) => h('th', null, t)))),
+      h('tbody', null, ...itens.map((r, i) => {
+        const id = r.userId || (r.pessoa && r.pessoa.id);
+        const nome = r.pessoa ? r.pessoa.nome : id;
+        return h('tr', null,
+          comPosicao ? h('td', null, i + 1) : '',
+          h('td', null, pessoaCel(r.pessoa, id)),
+          h('td', null, h('b', null, n(r.validos))), h('td', null, n(r.entradas)), h('td', null, n(r.saidas)), h('td', null, n(r.fakes)),
+          podeReset ? h('td', null, h('button', { class: 'perigo', on: { click: () => zerarUsuario(id, nome) } }, 'Zerar')) : '');
+      })));
+  }
+
+  async function rankingAba(root) {
+    const lista = await api(`/api/ranking?periodo=${S.periodo}`);
+    const resultado = h('div', { class: 'wrap', style: 'margin-top:12px' });
+    const busca = h('input', { placeholder: 'Nome ou ID do membro', style: 'min-width:220px' });
+    let espera = null;
+    busca.addEventListener('input', () => {
+      clearTimeout(espera);
+      espera = setTimeout(async () => {
+        if (busca.value.trim().length < 2) { resultado.replaceChildren(); return; }
+        try {
+          const r = await api(`/api/convites/usuario?busca=${encodeURIComponent(busca.value)}`);
+          resultado.replaceChildren(r.length ? tabelaConvites(r, false) : h('p', { class: 'mut' }, 'Nenhum membro encontrado.'));
+        } catch (e) { resultado.replaceChildren(h('p', { class: 'bad' }, e.message)); }
+      }, 300);
+    });
+    const zerarTudo = S.me.permissoes.admin ? h('button', { class: 'perigo', on: { click: async () => {
+      const t = prompt('Isso zera a contagem de convites de TODOS os membros.\nDigite RESETAR para confirmar.');
+      if (t !== 'RESETAR') return;
+      const metricas = confirm('Zerar também as métricas de plataforma?\nOK = sim, Cancelar = só a contagem de convites.');
+      try {
+        const r = await api('/api/resetar/servidor', { confirmar: t, metricas });
+        alert(`Servidor zerado: ${r.convites} entradas de convites.`);
+        render();
+      } catch (e) { alert(e.message); }
+    } } }, 'Zerar convites do servidor') : '';
+    root.append(
+      h('div', { class: 'row' }, periodoSel(render), zerarTudo),
+      h('div', { class: 'card' }, h('h3', null, 'Consultar um membro'),
+        h('div', { class: 'row' }, h('label', null, 'Buscar', busca)), resultado),
+      h('div', { class: 'card wrap' }, h('h3', null, 'Ranking'),
+        lista.length ? tabelaConvites(lista, true) : h('p', { class: 'mut' }, 'Ainda não há convites de usuários.')));
+  }
+
+  async function auditoriaAba(root) {
+    const lista = await api('/api/auditoria');
+    root.append(h('div', { class: 'card wrap' }, lista.length ? h('table', null,
+      h('thead', null, h('tr', null, ...['Quando', 'Quem', 'Ação', 'Detalhes'].map((t) => h('th', null, t)))),
+      h('tbody', null, ...lista.map((l) => h('tr', null,
+        h('td', null, data(l.quando)),
+        h('td', null, l.pessoa ? pessoaCel(l.pessoa, l.pessoa.id) : '–'),
+        h('td', null, ROTULOS_AUD[l.acao] || l.acao),
+        h('td', null, l.detalhes || '–')))))
+      : h('p', { class: 'mut' }, 'Nenhuma ação registrada ainda.')));
+  }
+
+  async function configAba(root) {
+    const c = await api('/api/config');
+    const canais = await api('/api/canais').catch(() => []);
+    const cargos = await api('/api/cargos').catch(() => []);
+    const opt = (lista, atual, prefixo = '#') => [h('option', { value: '' }, '— nenhum —'),
+      ...lista.map((x) => h('option', { value: x.id, selected: x.id === atual ? 'selected' : null }, `${prefixo}${x.nome}`))];
+    const selCanal = (id, atual) => h('select', { id }, ...opt(canais, atual));
+    const cs = {
+      plataformas: selCanal('c-p', c.canais.plataformas), usuarios: selCanal('c-u', c.canais.usuarios),
+      saidas: selCanal('c-s', c.canais.saidas), alertas: selCanal('c-a', c.canais.alertas), relatorios: selCanal('c-r', c.canais.relatorios),
+    };
+    const salvarCfg = h('button', { class: 'pri', on: { click: async () => {
+      try {
+        await api('/api/config', {
+          canais: Object.fromEntries(Object.entries(cs).map(([k, el]) => [k, el.value || null])),
+          fuso: fuso.value,
+          antiabuso: {
+            contaDias: +ca.value, saidaMin: +sm.value, picoQtd: +pq.value, picoMin: +pm.value,
+            avatarPadrao: av.checked, fakesNasMetricas: fm.checked,
+          },
+          relatorios: { semanal: rs.checked, mensal: rm.checked },
+        });
+        root.replaceChildren(); configAba(root);
+        alert('Configuração salva.');
+      } catch (e) { alert(e.message); }
+    } } }, 'Salvar configuração');
+    const fuso = h('input', { value: c.fuso });
+    const ca = h('input', { type: 'number', min: 0, max: 365, value: c.antiabuso.contaDias, style: 'width:90px' });
+    const sm = h('input', { type: 'number', min: 0, max: 10080, value: c.antiabuso.saidaMin, style: 'width:90px' });
+    const pq = h('input', { type: 'number', min: 0, max: 1000, value: c.antiabuso.picoQtd, style: 'width:90px' });
+    const pm = h('input', { type: 'number', min: 1, max: 60, value: c.antiabuso.picoMin, style: 'width:90px' });
+    const av = h('input', { type: 'checkbox', checked: c.antiabuso.avatarPadrao });
+    const fm = h('input', { type: 'checkbox', checked: c.antiabuso.fakesNasMetricas });
+    const rs = h('input', { type: 'checkbox', checked: c.relatorios.semanal });
+    const rm = h('input', { type: 'checkbox', checked: c.relatorios.mensal });
+
+    // Recompensa (opcional)
+    const rec = c.recompensa;
+    const recCargo = h('select', { id: 'r-cargo' }, ...opt(cargos, rec.cargoId, '@'));
+    const recMin = h('input', { type: 'number', min: 1, max: 10000, value: rec.minimo, style: 'width:90px' });
+    const recRem = h('input', { type: 'checkbox', checked: rec.remover });
+    const recAtiva = h('input', { type: 'checkbox', checked: rec.ativa });
+    const salvarRec = h('button', { class: 'pri', on: { click: async () => {
+      try {
+        await api('/api/recompensa', { ativa: recAtiva.checked, cargoId: recCargo.value, minimo: +recMin.value, remover: recRem.checked });
+        alert('Recompensa salva.');
+      } catch (e) { alert(e.message); }
+    } } }, 'Salvar recompensa');
+
+    // Permissões por cargo
+    const permCargo = h('select', { id: 'p-cargo' }, ...cargos.map((x) => h('option', { value: x.id }, `@${x.nome}`)));
+    const flags = { ver_stats: 'Ver estatísticas', gerir_links: 'Gerir links', gerir_recompensas: 'Recompensas e fakes', exportar: 'Exportar CSV' };
+    const pcheck = Object.fromEntries(Object.keys(flags).map((k) => [k, h('input', { type: 'checkbox' })]));
+    const carregarPerm = () => {
+      const atual = c.permissoes.find((x) => x.cargo_id === permCargo.value) || {};
+      for (const k of Object.keys(flags)) pcheck[k].checked = atual[k] === 1;
+    };
+    permCargo.addEventListener('change', carregarPerm);
+    carregarPerm();
+    const salvarPerm = h('button', { class: 'pri', on: { click: async () => {
+      try {
+        await api('/api/permissoes', { cargoId: permCargo.value, perms: Object.fromEntries(Object.keys(flags).map((k) => [k, pcheck[k].checked])) });
+        alert('Permissões salvas.');
+      } catch (e) { alert(e.message); }
+    } } }, 'Salvar permissões');
+
+    const lbl = (t, el) => h('label', null, t, el);
+    root.append(
+      h('div', { class: 'card' }, h('h3', null, 'Canais de log'),
+        h('div', { class: 'row' }, lbl('Entradas por link', cs.plataformas), lbl('Entradas por convite de usuário', cs.usuarios),
+          lbl('Saídas', cs.saidas), lbl('Alertas', cs.alertas), lbl('Relatórios', cs.relatorios))),
+      h('div', { class: 'card' }, h('h3', null, 'Anti-abuso e métricas'),
+        h('div', { class: 'row' }, lbl('Fuso', fuso), lbl('Conta nova (dias)', ca), lbl('Saída rápida (min)', sm),
+          lbl('Pico: entradas', pq), lbl('Pico: janela (min)', pm),
+          h('label', { class: 'row' }, av, 'Selo para avatar padrão'),
+          h('label', { class: 'row' }, fm, 'Fakes entram nas métricas'))),
+      h('div', { class: 'card' }, h('h3', null, 'Relatórios automáticos'),
+        h('div', { class: 'row' }, h('label', { class: 'row' }, rs, 'Semanal (segunda, 09h)'), h('label', { class: 'row' }, rm, 'Mensal (dia 1, 09h)'))),
+      h('div', { class: 'row', style: 'margin-bottom:16px' }, salvarCfg),
+      h('div', { class: 'card' }, h('h3', null, 'Recompensa por cargo (opcional)'),
+        h('p', { class: 'mut' }, 'Um único cargo, igual para todos, ao atingir X convites válidos.'),
+        h('div', { class: 'row' }, h('label', { class: 'row' }, recAtiva, 'Ligada'), lbl('Cargo', recCargo), lbl('Convites válidos', recMin),
+          h('label', { class: 'row' }, recRem, 'Tirar ao cair abaixo do mínimo')), h('div', { style: 'margin-top:12px' }, salvarRec)),
+      h('div', { class: 'card' }, h('h3', null, 'Permissões por cargo'),
+        h('p', { class: 'mut' }, 'Administradores podem tudo. Aqui você libera cargos específicos (ex.: Marketing).'),
+        h('div', { class: 'row' }, lbl('Cargo', permCargo), ...Object.entries(flags).map(([k, t]) => h('label', { class: 'row' }, pcheck[k], t))),
+        h('div', { style: 'margin-top:12px' }, salvarPerm)));
+  }
+
+  function exportarAba(root) {
+    const tipos = [['links', 'Links e métricas'], ['plataformas', 'Plataformas'], ['evolucao', 'Evolução por dia'], ['entradas', 'Entradas (uma por membro)']];
+    root.append(periodoSel(render), h('div', { class: 'card' }, h('p', null, 'CSV com BOM, abre direto no Excel e no Google Sheets.'),
+      h('div', { class: 'row' }, ...tipos.map(([t, rot]) => h('button', { on: { click: () => {
+        window.location = `/api/export/${t}?periodo=${S.periodo}`;
+      } } }, `⬇ ${rot}`)))));
+  }
+
+  const ABAS = [
+    ['visao', 'Visão geral', () => S.me.permissoes.ver, visao],
+    ['links', 'Links', () => S.me.permissoes.ver, linksAba],
+    ['entradas', 'Membros', () => S.me.permissoes.ver, entradasAba],
+    ['ranking', 'Convites', () => S.me.permissoes.ver, rankingAba],
+    ['config', 'Configurações', () => S.me.permissoes.admin, configAba],
+    ['auditoria', 'Auditoria', () => S.me.permissoes.admin, auditoriaAba],
+    ['exportar', 'Exportar', () => S.me.permissoes.exportar, exportarAba],
+  ];
+
+  async function render() {
+    app.replaceChildren(h('p', { class: 'mut' }, 'Carregando…'));
+    const abas = ABAS.filter(([, , ok]) => ok());
+    if (!abas.some(([k]) => k === S.aba)) S.aba = abas[0] ? abas[0][0] : 'visao';
+    const nav = h('nav', null, ...abas.map(([k, t]) => h('button', { class: S.aba === k ? 'on' : '', on: { click: () => { S.aba = k; S.detalhe = null; render(); } } }, t)));
+    const corpo = h('div');
+    app.replaceChildren(nav, corpo);
+    if (!abas.length) return corpo.append(h('p', { class: 'mut' }, 'Seu cargo não tem nenhuma permissão no InViewte.'));
+    try {
+      const alvo = abas.find(([k]) => k === S.aba);
+      await alvo[3](corpo);
+    } catch (e) {
+      corpo.append(h('div', { class: 'msg bad' }, e.message));
+    }
+    return undefined;
+  }
+
+  async function iniciar() {
+    S.me = await api('/api/me');
+    if (!S.me.logado) {
+      who.textContent = '';
+      app.replaceChildren(h('div', { class: 'card login' },
+        h('h2', null, 'Painel do InViewte'),
+        h('p', { class: 'mut' }, 'Entre com sua conta do Discord. Você verá apenas o que o seu cargo permite.'),
+        h('a', { href: '/login' }, h('button', { class: 'pri' }, 'Entrar com Discord'))));
+      return;
+    }
+    if (!S.me.acesso) {
+      app.replaceChildren(h('div', { class: 'card login' }, h('p', null, 'Sua conta não está no servidor configurado.'),
+        h('button', { on: { click: async () => { await api('/logout', {}); location.reload(); } } }, 'Sair')));
+      return;
+    }
+    who.replaceChildren(h('span', null, S.me.user.nome + ' · '),
+      h('button', { on: { click: async () => { await api('/logout', {}); location.reload(); } } }, 'Sair'));
+    render();
+  }
+
+  iniciar().catch((e) => app.replaceChildren(h('div', { class: 'msg bad' }, e.message)));
+})();
+</script>
+</body>
+</html>
