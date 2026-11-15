@@ -1,5 +1,7 @@
 'use strict';
 
+const path = require('node:path');
+
 const { Client, GatewayIntentBits, Events, InteractionType } = require('discord.js');
 const { config, validar } = require('./config');
 const db = require('./db');
@@ -17,6 +19,13 @@ async function main() {
 
   const conexao = db.abrir(config.dataDir);
   const ctx = criarContexto(conexao, config.guildId);
+
+  const total = conexao.prepare('SELECT COUNT(*) AS n FROM links').get().n;
+  console.log(`[bot] banco: ${path.resolve(config.dataDir)} (${total} links salvos)`);
+  if (process.env.RAILWAY_ENVIRONMENT && !process.env.DATA_DIR) {
+    console.warn('[AVISO] Railway sem DATA_DIR: o banco fica no disco temporário e é APAGADO a cada deploy. '
+      + 'Crie um Volume em /data e defina DATA_DIR=/data.');
+  }
 
   const client = new Client({
     intents: [
